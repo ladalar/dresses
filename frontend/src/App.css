@@ -1,0 +1,180 @@
+/* ---- Header ---- */
+.header {
+  text-align: center;
+  padding: 2rem 1rem 1rem;
+}
+.header h1 {
+  font-size: 2.4rem;
+  color: #8b4570;
+  letter-spacing: 1px;
+}
+.header p {
+  color: #a07090;
+  margin-top: 0.3rem;
+}
+
+/* ---- Toolbar ---- */
+.toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 1.2rem 0;
+}
+.toolbar select,
+.toolbar button {
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #d4a0c0;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.toolbar select { background: #fff; color: #3a2a2a; }
+.btn-add {
+  background: #8b4570;
+  color: white;
+  border: none !important;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+.btn-add:hover { background: #6d3458; }
+
+/* ---- Table ---- */
+.table-wrap { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(139,69,112,0.1);
+}
+thead { background: #8b4570; color: white; }
+thead th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+thead th:hover { background: #6d3458; }
+thead th .sort-icon { margin-left: 4px; font-size: 0.75rem; }
+tbody tr { border-bottom: 1px solid #f3e0eb; transition: background 0.15s; }
+tbody tr:hover { background: #fdf0f7; }
+tbody tr:last-child { border-bottom: none; }
+td { padding: 0.65rem 1rem; vertical-align: middle; }
+
+.dress-thumb {
+  width: 70px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 5px;
+  display: block;
+  background: #ecdde8;
+}
+.no-image {
+  width: 70px;
+  height: 90px;
+  border-radius: 5px;
+  background: #ecdde8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+}
+.dress-link { color: #8b4570; text-decoration: none; }
+.dress-link:hover { text-decoration: underline; }
+.rank-badge {
+  display: inline-block;
+  background: #8b4570;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  text-align: center;
+  line-height: 28px;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+.actions { display: flex; gap: 0.4rem; }
+.btn-edit, .btn-delete {
+  padding: 0.3rem 0.75rem;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: opacity 0.15s;
+}
+.btn-edit { background: #d4a0c0; color: #3a2a2a; }
+.btn-edit:hover { opacity: 0.75; }
+.btn-delete { background: #e05078; color: white; }
+.btn-delete:hover { opacity: 0.75; }
+
+/* ---- Empty state ---- */
+.empty { text-align: center; padding: 3rem; color: #a07090; font-size: 1.1rem; }
+
+/* ---- Modal ---- */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  width: min(520px, 95vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 40px rgba(139,69,112,0.25);
+}
+.modal h2 { color: #8b4570; margin-bottom: 1.2rem; }
+.form-grid { display: grid; gap: 1rem; }
+.form-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.form-field label { font-size: 0.88rem; font-weight: bold; color: #6d3458; }
+.form-field input,
+.form-field textarea {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d4a0c0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+.form-field input:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: #8b4570;
+  box-shadow: 0 0 0 2px rgba(139,69,112,0.15);
+}
+.form-field textarea { resize: vertical; min-height: 70px; }
+.modal-actions {
+  display: flex; gap: 0.75rem; margin-top: 1.4rem; justify-content: flex-end;
+}
+.btn-save {
+  background: #8b4570; color: white;
+  border: none; border-radius: 6px;
+  padding: 0.55rem 1.4rem;
+  font-size: 0.95rem; cursor: pointer; font-weight: bold;
+  transition: background 0.2s;
+}
+.btn-save:hover { background: #6d3458; }
+.btn-cancel {
+  background: #f3e0eb; color: #3a2a2a;
+  border: none; border-radius: 6px;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.95rem; cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-cancel:hover { background: #e0c4d4; }
+.error-msg { color: #c0325a; font-size: 0.85rem; margin-top: 0.2rem; }
+
+/* ---- Loading ---- */
+.loading { text-align: center; padding: 3rem; color: #a07090; font-size: 1.1rem; }
+
+/* ---- Preview image in modal ---- */
+.preview-img {
+  width: 80px; height: 100px; object-fit: cover;
+  border-radius: 5px; margin-top: 0.4rem;
+  border: 1px solid #d4a0c0;
+}
