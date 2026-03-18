@@ -65,22 +65,61 @@ tbody tr:last-child { border-bottom: none; }
 td { padding: 0.65rem 1rem; vertical-align: middle; }
 
 .dress-thumb {
-  width: 70px;
-  height: 90px;
+  width: 60px;
+  height: 78px;
   object-fit: cover;
   border-radius: 5px;
   display: block;
   background: #ecdde8;
+  cursor: zoom-in;
+  transition: box-shadow 0.15s;
 }
+.dress-thumb:hover { box-shadow: 0 0 0 2px #8b4570; }
 .no-image {
-  width: 70px;
-  height: 90px;
+  width: 60px;
+  height: 78px;
   border-radius: 5px;
   background: #ecdde8;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.6rem;
+}
+
+/* thumbnail gallery (multiple images in one cell) */
+.thumb-gallery {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-width: 160px;
+}
+
+/* wrapper that anchors the hover zoom */
+.thumb-wrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+/* hover zoom popup — fixed to viewport so it overlays the table */
+.thumb-zoom {
+  position: fixed;
+  z-index: 200;
+  pointer-events: none;
+  animation: zoomIn 0.12s ease;
+}
+.thumb-zoom img {
+  width: 280px;
+  height: 360px;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  border: 3px solid #8b4570;
+  display: block;
+}
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
 }
 .dress-link { color: #8b4570; text-decoration: none; }
 .dress-link:hover { text-decoration: underline; }

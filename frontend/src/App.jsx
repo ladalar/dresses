@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 
 const API = '/api/dresses';
@@ -10,10 +10,92 @@ const SORT_COLS = [
   { key: 'created_at', label: 'Date Added' },
 ];
 
-const EMPTY_FORM = { name: '', image_url: '', price: '', link: '', rank: '', comments: '' };
+const EMPTY_FORM = {
+  name: '', image_url: '', image_url_2: '', image_url_3: '', image_url_4: '',
+  price: '', link: '', rank: '', comments: '',
+};
+
+// Returns non-empty image URLs from a dress object (up to 4)
+function getDressImages(d) {
+  return [d.image_url, d.image_url_2, d.image_url_3, d.image_url_4].filter(Boolean);
+}
+
+const ZOOM_WIDTH = 280;
+
+// Thumbnail with hover-zoom overlay
+function DressThumb({ src, alt }) {
+  const [hovered, setHovered] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const ref = useRef(null);
+
+  const handleMouseEnter = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      // Show zoom to the right of the thumbnail; flip left if too close to viewport edge
+      const left = rect.right + 12 + ZOOM_WIDTH > window.innerWidth
+        ? rect.left - ZOOM_WIDTH - 12
+        : rect.right + 12;
+      setPos({ top: rect.top, left });
+    }
+    setHovered(true);
+  };
+
+  if (failed) return <div className="no-image">👗</div>;
+
+  return (
+    <span ref={ref} className="thumb-wrap"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setHovered(false)}>
+      <img
+        src={src}
+        alt={alt}
+        className="dress-thumb"
+        onError={() => setFailed(true)}
+      />
+      {hovered && (
+        <div className="thumb-zoom" style={{ top: pos.top, left: pos.left }}>
+          <img src={src} alt={alt} />
+        </div>
+      )}
+    </span>
+  );
+}
+
+// Image URL input row inside the form
+function ImageField({ label, value, onChange }) {
+  return (
+    <div className="form-field">
+      <label>{label}</label>
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder="https://..." />
+      {value && (
+        <img
+          src={value}
+          alt="preview"
+          className="preview-img"
+          onError={e => { e.target.style.display = 'none'; }}
+          onLoad={e => { e.target.style.display = 'block'; }}
+        />
+      )}
+    </div>
+  );
+}
 
 function DressModal({ dress, onClose, onSave }) {
-  const [form, setForm] = useState(dress ? { ...dress, price: dress.price ?? '', rank: dress.rank ?? '' } : { ...EMPTY_FORM });
+  const [form, setForm] = useState(
+    dress
+      ? {
+          ...EMPTY_FORM,
+          ...dress,
+          price: dress.price ?? '',
+          rank: dress.rank ?? '',
+          image_url: dress.image_url ?? '',
+          image_url_2: dress.image_url_2 ?? '',
+          image_url_3: dress.image_url_3 ?? '',
+          image_url_4: dress.image_url_4 ?? '',
+        }
+      : { ...EMPTY_FORM }
+  );
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -28,6 +110,9 @@ function DressModal({ dress, onClose, onSave }) {
       const payload = {
         name: form.name.trim(),
         image_url: form.image_url.trim() || null,
+        image_url_2: form.image_url_2.trim() || null,
+        image_url_3: form.image_url_3.trim() || null,
+        image_url_4: form.image_url_4.trim() || null,
         price: form.price !== '' ? parseFloat(form.price) : null,
         link: form.link.trim() || null,
         rank: form.rank !== '' ? parseInt(form.rank, 10) : null,
@@ -63,13 +148,12 @@ function DressModal({ dress, onClose, onSave }) {
             <label>Name *</label>
             <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Vera Wang Classic" />
           </div>
-          <div className="form-field">
-            <label>Image URL</label>
-            <input value={form.image_url} onChange={e => set('image_url', e.target.value)} placeholder="https://..." />
-            {form.image_url && (
-              <img src={form.image_url} alt="preview" className="preview-img" onError={e => { e.target.style.display = 'none'; }} />
-            )}
-          </div>
+
+          <ImageField label="Image 1" value={form.image_url} onChange={v => set('image_url', v)} />
+          <ImageField label="Image 2" value={form.image_url_2} onChange={v => set('image_url_2', v)} />
+          <ImageField label="Image 3" value={form.image_url_3} onChange={v => set('image_url_3', v)} />
+          <ImageField label="Image 4" value={form.image_url_4} onChange={v => set('image_url_4', v)} />
+
           <div className="form-field">
             <label>Price ($)</label>
             <input type="number" min="0" step="0.01" value={form.price} onChange={e => set('price', e.target.value)} placeholder="e.g. 2500" />
@@ -185,7 +269,7 @@ export default function App() {
             <thead>
               <tr>
                 <th onClick={() => handleSort('rank')}>Rank <span className="sort-icon">{sortIcon('rank')}</span></th>
-                <th>Image</th>
+                <th>Images</th>
                 <th onClick={() => handleSort('name')}>Name <span className="sort-icon">{sortIcon('name')}</span></th>
                 <th onClick={() => handleSort('price')}>Price <span className="sort-icon">{sortIcon('price')}</span></th>
                 <th>Link</th>
@@ -194,26 +278,31 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {dresses.map(d => (
-                <tr key={d.id}>
-                  <td>{d.rank != null ? <span className="rank-badge">{d.rank}</span> : '—'}</td>
-                  <td>
-                    {d.image_url
-                      ? <img src={d.image_url} alt={d.name} className="dress-thumb" onError={e => { e.target.replaceWith(Object.assign(document.createElement('div'), { className: 'no-image', textContent: '👗' })); }} />
-                      : <div className="no-image">👗</div>}
-                  </td>
-                  <td><strong>{d.name}</strong></td>
-                  <td>{d.price != null ? `$${Number(d.price).toLocaleString()}` : '—'}</td>
-                  <td>{d.link ? <a href={d.link} target="_blank" rel="noreferrer" className="dress-link">View ↗</a> : '—'}</td>
-                  <td style={{ maxWidth: '220px', whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>{d.comments || '—'}</td>
-                  <td>
-                    <div className="actions">
-                      <button className="btn-edit" onClick={() => { setEditing(d); setModalOpen(true); }}>Edit</button>
-                      <button className="btn-delete" onClick={() => handleDelete(d.id)}>Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {dresses.map(d => {
+                const imgs = getDressImages(d);
+                return (
+                  <tr key={d.id}>
+                    <td>{d.rank != null ? <span className="rank-badge">{d.rank}</span> : '—'}</td>
+                    <td>
+                      <div className="thumb-gallery">
+                        {imgs.length > 0
+                          ? imgs.map((src, i) => <DressThumb key={i} src={src} alt={`${d.name} ${i + 1}`} />)
+                          : <div className="no-image">👗</div>}
+                      </div>
+                    </td>
+                    <td><strong>{d.name}</strong></td>
+                    <td>{d.price != null ? `$${Number(d.price).toLocaleString()}` : '—'}</td>
+                    <td>{d.link ? <a href={d.link} target="_blank" rel="noreferrer" className="dress-link">View ↗</a> : '—'}</td>
+                    <td style={{ maxWidth: '220px', whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>{d.comments || '—'}</td>
+                    <td>
+                      <div className="actions">
+                        <button className="btn-edit" onClick={() => { setEditing(d); setModalOpen(true); }}>Edit</button>
+                        <button className="btn-delete" onClick={() => handleDelete(d.id)}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
