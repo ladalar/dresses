@@ -1,11 +1,38 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const rateLimit = require('express-rate-limit');
 const db = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const uploadsDir = path.join(__dirname, 'uploads');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const safeBase = path.basename(file.originalname, path.extname(file.originalname)).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, `${Date.now()}-${safeBase}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image uploads are allowed'));
+    }
+    return cb(null, true);
+  },
+});
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -22,12 +49,19 @@ const staticLimiter = rateLimit({
 });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
 app.use('/api', apiLimiter);
+app.use('/uploads', express.static(uploadsDir));
 
 // Serve built frontend
 const frontendDist = path.join(__dirname, '../frontend/dist');
 app.use(express.static(frontendDist));
+
+// Upload image file and return relative URL to store in DB
+app.post('/api/uploads', upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Image file is required' });
+  return res.status(201).json({ url: `/uploads/${req.file.filename}` });
+});
 
 // GET all dresses with optional sorting
 app.get('/api/dresses', (req, res) => {
@@ -120,6 +154,20 @@ app.delete('/api/dresses/:id', (req, res) => {
 
   db.prepare('DELETE FROM dresses WHERE id = ?').run(req.params.id);
   res.status(204).send();
+});
+
+// Friendly error for oversized uploads (for base64 image submissions)
+app.use((err, req, res, next) => {
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'Uploaded image is too large. Please use a smaller image file.' });
+  }
+  if (err?.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'Image file is too large. Max size is 8MB.' });
+  }
+  if (err?.message === 'Only image uploads are allowed') {
+    return res.status(400).json({ error: err.message });
+  }
+  return next(err);
 });
 
 // Serve React frontend for all non-API routes

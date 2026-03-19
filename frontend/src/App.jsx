@@ -45,6 +45,10 @@ function DressThumb({ src, alt }) {
 
 // ── Image field in modal (preview above, input below) ─────────────────────────
 function ImageField({ label, value, onChange }) {
+  const handleUrlChange = e => {
+    onChange(normalizeImageUrl(e.target.value));
+  };
+
   return (
     <div className="img-field">
       <div className="img-preview-box">
@@ -55,7 +59,7 @@ function ImageField({ label, value, onChange }) {
           : <div className="preview-placeholder">👗</div>}
       </div>
       <span className="img-field-label">{label}</span>
-      <input value={value} onChange={e => onChange(e.target.value)} placeholder="https://…" />
+      <input value={value} onChange={handleUrlChange} placeholder="https://…" />
     </div>
   );
 }
@@ -122,10 +126,10 @@ function DressModal({ dress, onClose, onSave, allDresses }) {
     try {
       const payload = {
         name:        form.name.trim(),
-        image_url:   form.image_url.trim()   || null,
-        image_url_2: form.image_url_2.trim() || null,
-        image_url_3: form.image_url_3.trim() || null,
-        image_url_4: form.image_url_4.trim() || null,
+        image_url:   form.image_url.trim()   ? normalizeImageUrl(form.image_url)   : null,
+        image_url_2: form.image_url_2.trim() ? normalizeImageUrl(form.image_url_2) : null,
+        image_url_3: form.image_url_3.trim() ? normalizeImageUrl(form.image_url_3) : null,
+        image_url_4: form.image_url_4.trim() ? normalizeImageUrl(form.image_url_4) : null,
         price:       form.price   !== '' ? parseFloat(form.price)        : null,
         link:        form.link.trim()    || null,
         rank:        form.rank    !== '' ? parseInt(form.rank, 10)       : null,
