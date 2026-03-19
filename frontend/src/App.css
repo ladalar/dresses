@@ -208,6 +208,123 @@ td { padding: 0.65rem 1rem; vertical-align: top; }
 .btn-cancel:hover { background: #e0c4d4; }
 .error-msg { color: #c0325a; font-size: 0.85rem; margin-top: 0.2rem; }
 
+/* ---- Filter bar ---- */
+.filter-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 0 1.2rem;
+  padding: 0.75rem 1rem;
+  background: #fdf0f7;
+  border-radius: 8px;
+  border: 1px solid #e8c8dc;
+}
+.filter-label {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #6d3458;
+  margin-right: 0.25rem;
+}
+.filter-bar select {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #d4a0c0;
+  font-size: 0.88rem;
+  background: #fff;
+  color: #3a2a2a;
+  cursor: pointer;
+}
+.btn-clear-filters {
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid #e05078;
+  background: #fff;
+  color: #e05078;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-clear-filters:hover { background: #e05078; color: #fff; }
+
+/* ---- Attribute pills ---- */
+.attr-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+.pill {
+  display: inline-block;
+  font-size: 0.73rem;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pill-silhouette { background: #f0d8ea; color: #6d3458; }
+.pill-sleeves    { background: #dce8f7; color: #2a4a70; }
+.pill-neckline   { background: #d8f0e8; color: #1a5c3a; }
+.pill-feature    { background: #f7f0d8; color: #5c4a1a; }
+
+/* ---- Form: Style Details section heading ---- */
+.form-section-label {
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8b4570;
+  border-bottom: 1px solid #e8c8dc;
+  padding-bottom: 0.3rem;
+  margin-top: 0.5rem;
+}
+
+/* ---- Form: select field ---- */
+.form-field select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d4a0c0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: #fff;
+  color: #3a2a2a;
+  cursor: pointer;
+}
+.form-field select:focus {
+  outline: none;
+  border-color: #8b4570;
+  box-shadow: 0 0 0 2px rgba(139,69,112,0.15);
+}
+
+/* ---- Features checkbox grid ---- */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.4rem 0.75rem;
+  margin-top: 0.2rem;
+}
+.feature-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  color: #3a2a2a;
+  cursor: pointer;
+}
+.feature-check input { cursor: pointer; accent-color: #8b4570; }
+
+/* ---- "no results" inline clear-filter link button ---- */
+.btn-link {
+  background: none;
+  border: none;
+  color: #8b4570;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+}
+.btn-link:hover { color: #6d3458; }
+
 /* ---- Loading ---- */
 .loading { text-align: center; padding: 3rem; color: #a07090; font-size: 1.1rem; }
 

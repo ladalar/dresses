@@ -10,14 +10,26 @@ const SORT_COLS = [
   { key: 'created_at', label: 'Date Added' },
 ];
 
+const SILHOUETTE_OPTIONS = ['A-line', 'Ball Gown', 'Mermaid', 'Trumpet', 'Sheath', 'Column', 'Tea-length', 'Mini'];
+const SLEEVES_OPTIONS    = ['Sleeveless', 'Strapless', 'Cap Sleeves', 'Short Sleeves', '3/4 Sleeves', 'Long Sleeves'];
+const NECKLINE_OPTIONS   = ['V-neck', 'Sweetheart', 'Square', 'Straight', 'Halter', 'Off-shoulder', 'Illusion', 'Scoop', 'High neck'];
+const FEATURES_OPTIONS   = ['Corset', 'Leg Slit', 'Pockets', 'Train', 'Lace', 'Beading', 'Bow', 'Open Back', 'Detachable Sleeves', 'Floral Appliqués', 'Ruching', 'Cape'];
+
 const EMPTY_FORM = {
   name: '', image_url: '', image_url_2: '', image_url_3: '', image_url_4: '',
   price: '', link: '', rank: '', comments: '',
+  silhouette: '', sleeves: '', neckline: '', features: [],
 };
 
 // Returns non-empty image URLs from a dress object (up to 4)
 function getDressImages(d) {
   return [d.image_url, d.image_url_2, d.image_url_3, d.image_url_4].filter(Boolean);
+}
+
+// Parse comma-separated features string → array (trims whitespace around each item)
+function parseFeatures(str) {
+  if (!str) return [];
+  return str.split(',').map(s => s.trim()).filter(Boolean);
 }
 
 const ZOOM_WIDTH = 360;
@@ -81,6 +93,40 @@ function ImageField({ label, value, onChange }) {
   );
 }
 
+// Single-select dropdown field for the form
+function SelectField({ label, value, onChange, options }) {
+  return (
+    <div className="form-field">
+      <label>{label}</label>
+      <select value={value} onChange={e => onChange(e.target.value)}>
+        <option value="">— Select —</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+}
+
+// Checkbox grid for multi-select features
+function FeaturesField({ value, onChange }) {
+  const toggle = (feat) => {
+    if (value.includes(feat)) onChange(value.filter(f => f !== feat));
+    else onChange([...value, feat]);
+  };
+  return (
+    <div className="form-field">
+      <label>Features</label>
+      <div className="features-grid">
+        {FEATURES_OPTIONS.map(f => (
+          <label key={f} className="feature-check">
+            <input type="checkbox" checked={value.includes(f)} onChange={() => toggle(f)} />
+            {f}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DressModal({ dress, onClose, onSave }) {
   const [form, setForm] = useState(
     dress
@@ -93,6 +139,10 @@ function DressModal({ dress, onClose, onSave }) {
           image_url_2: dress.image_url_2 ?? '',
           image_url_3: dress.image_url_3 ?? '',
           image_url_4: dress.image_url_4 ?? '',
+          silhouette: dress.silhouette ?? '',
+          sleeves: dress.sleeves ?? '',
+          neckline: dress.neckline ?? '',
+          features: parseFeatures(dress.features),
         }
       : { ...EMPTY_FORM }
   );
@@ -117,6 +167,10 @@ function DressModal({ dress, onClose, onSave }) {
         link: form.link.trim() || null,
         rank: form.rank !== '' ? parseInt(form.rank, 10) : null,
         comments: form.comments.trim() || null,
+        silhouette: form.silhouette || null,
+        sleeves: form.sleeves || null,
+        neckline: form.neckline || null,
+        features: form.features.length > 0 ? form.features.join(',') : null,
       };
       const url = dress ? `${API}/${dress.id}` : API;
       const method = dress ? 'PUT' : 'POST';
@@ -170,6 +224,13 @@ function DressModal({ dress, onClose, onSave }) {
             <label>Comments</label>
             <textarea value={form.comments} onChange={e => set('comments', e.target.value)} placeholder="Your notes about this dress..." />
           </div>
+
+          <div className="form-section-label">Style Details</div>
+          <SelectField label="Silhouette" value={form.silhouette} onChange={v => set('silhouette', v)} options={SILHOUETTE_OPTIONS} />
+          <SelectField label="Sleeves" value={form.sleeves} onChange={v => set('sleeves', v)} options={SLEEVES_OPTIONS} />
+          <SelectField label="Neckline" value={form.neckline} onChange={v => set('neckline', v)} options={NECKLINE_OPTIONS} />
+          <FeaturesField value={form.features} onChange={v => set('features', v)} />
+
           {error && <p className="error-msg">{error}</p>}
           <div className="modal-actions">
             <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
@@ -188,6 +249,7 @@ export default function App() {
   const [order, setOrder] = useState('asc');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [filters, setFilters] = useState({ silhouette: '', sleeves: '', neckline: '', feature: '' });
 
   const fetchDresses = useCallback(async (sb = sortBy, ord = order) => {
     setLoading(true);
@@ -238,6 +300,21 @@ export default function App() {
     return order === 'asc' ? '↑' : '↓';
   };
 
+  const setFilter = (k, v) => setFilters(f => ({ ...f, [k]: v }));
+  const clearFilters = () => setFilters({ silhouette: '', sleeves: '', neckline: '', feature: '' });
+  const hasFilters = Object.values(filters).some(Boolean);
+
+  const filteredDresses = dresses.filter(d => {
+    if (filters.silhouette && d.silhouette !== filters.silhouette) return false;
+    if (filters.sleeves    && d.sleeves    !== filters.sleeves)    return false;
+    if (filters.neckline   && d.neckline   !== filters.neckline)   return false;
+    if (filters.feature) {
+      const dFeatures = parseFeatures(d.features);
+      if (!dFeatures.includes(filters.feature)) return false;
+    }
+    return true;
+  });
+
   return (
     <>
       <div className="header">
@@ -256,12 +333,40 @@ export default function App() {
         <button className="btn-add" onClick={() => { setEditing(null); setModalOpen(true); }}>+ Add Dress</button>
       </div>
 
+      <div className="filter-bar">
+        <span className="filter-label">Filter:</span>
+        <select value={filters.silhouette} onChange={e => setFilter('silhouette', e.target.value)}>
+          <option value="">All Silhouettes</option>
+          {SILHOUETTE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <select value={filters.sleeves} onChange={e => setFilter('sleeves', e.target.value)}>
+          <option value="">All Sleeves</option>
+          {SLEEVES_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <select value={filters.neckline} onChange={e => setFilter('neckline', e.target.value)}>
+          <option value="">All Necklines</option>
+          {NECKLINE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <select value={filters.feature} onChange={e => setFilter('feature', e.target.value)}>
+          <option value="">All Features</option>
+          {FEATURES_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        {hasFilters && (
+          <button className="btn-clear-filters" onClick={clearFilters}>✕ Clear</button>
+        )}
+      </div>
+
       {loading ? (
         <div className="loading">Loading dresses…</div>
       ) : dresses.length === 0 ? (
         <div className="empty">
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👗</div>
           <p>No dresses yet. Click <strong>+ Add Dress</strong> to get started!</p>
+        </div>
+      ) : filteredDresses.length === 0 ? (
+        <div className="empty">
+          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔍</div>
+          <p>No dresses match the current filters. <button className="btn-link" onClick={clearFilters}>Clear filters</button></p>
         </div>
       ) : (
         <div className="table-wrap">
@@ -278,8 +383,9 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {dresses.map(d => {
+              {filteredDresses.map(d => {
                 const imgs = getDressImages(d);
+                const dFeatures = parseFeatures(d.features);
                 return (
                   <tr key={d.id}>
                     <td>{d.rank != null ? <span className="rank-badge">{d.rank}</span> : '—'}</td>
@@ -290,7 +396,15 @@ export default function App() {
                           : <div className="no-image">👗</div>}
                       </div>
                     </td>
-                    <td><strong>{d.name}</strong></td>
+                    <td>
+                      <strong>{d.name}</strong>
+                      <div className="attr-pills">
+                        {d.silhouette && <span className="pill pill-silhouette">{d.silhouette}</span>}
+                        {d.sleeves    && <span className="pill pill-sleeves">{d.sleeves}</span>}
+                        {d.neckline   && <span className="pill pill-neckline">{d.neckline}</span>}
+                        {dFeatures.map(f => <span key={f} className="pill pill-feature">{f}</span>)}
+                      </div>
+                    </td>
                     <td>{d.price != null ? `$${Number(d.price).toLocaleString()}` : '—'}</td>
                     <td>{d.link ? <a href={d.link} target="_blank" rel="noreferrer" className="dress-link">View ↗</a> : '—'}</td>
                     <td style={{ maxWidth: '220px', whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>{d.comments || '—'}</td>

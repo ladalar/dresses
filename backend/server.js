@@ -55,12 +55,13 @@ app.get('/api/dresses/:id', (req, res) => {
 
 // POST create dress
 app.post('/api/dresses', (req, res) => {
-  const { name, image_url, image_url_2, image_url_3, image_url_4, price, link, rank, comments } = req.body;
+  const { name, image_url, image_url_2, image_url_3, image_url_4, price, link, rank, comments,
+          silhouette, sleeves, neckline, features } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   const result = db
     .prepare(
-      'INSERT INTO dresses (name, image_url, image_url_2, image_url_3, image_url_4, price, link, rank, comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO dresses (name, image_url, image_url_2, image_url_3, image_url_4, price, link, rank, comments, silhouette, sleeves, neckline, features) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )
     .run(
       name,
@@ -71,7 +72,11 @@ app.post('/api/dresses', (req, res) => {
       price || null,
       link || null,
       rank || null,
-      comments || null
+      comments || null,
+      silhouette || null,
+      sleeves || null,
+      neckline || null,
+      features || null
     );
 
   const created = db.prepare('SELECT * FROM dresses WHERE id = ?').get(result.lastInsertRowid);
@@ -80,12 +85,13 @@ app.post('/api/dresses', (req, res) => {
 
 // PUT update dress
 app.put('/api/dresses/:id', (req, res) => {
-  const { name, image_url, image_url_2, image_url_3, image_url_4, price, link, rank, comments } = req.body;
+  const { name, image_url, image_url_2, image_url_3, image_url_4, price, link, rank, comments,
+          silhouette, sleeves, neckline, features } = req.body;
   const existing = db.prepare('SELECT * FROM dresses WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Dress not found' });
 
   db.prepare(
-    'UPDATE dresses SET name = ?, image_url = ?, image_url_2 = ?, image_url_3 = ?, image_url_4 = ?, price = ?, link = ?, rank = ?, comments = ? WHERE id = ?'
+    'UPDATE dresses SET name = ?, image_url = ?, image_url_2 = ?, image_url_3 = ?, image_url_4 = ?, price = ?, link = ?, rank = ?, comments = ?, silhouette = ?, sleeves = ?, neckline = ?, features = ? WHERE id = ?'
   ).run(
     name ?? existing.name,
     image_url ?? existing.image_url,
@@ -96,6 +102,10 @@ app.put('/api/dresses/:id', (req, res) => {
     link ?? existing.link,
     rank ?? existing.rank,
     comments ?? existing.comments,
+    silhouette ?? existing.silhouette,
+    sleeves ?? existing.sleeves,
+    neckline ?? existing.neckline,
+    features ?? existing.features,
     req.params.id
   );
 

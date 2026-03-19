@@ -21,10 +21,14 @@ db.exec(`
   )
 `);
 
-// Migrate existing tables that may be missing the extra image columns
+// Migrate existing tables that may be missing columns
 const existing = db.pragma("table_info(dresses)").map(c => c.name);
 if (!existing.includes('image_url_2')) db.exec('ALTER TABLE dresses ADD COLUMN image_url_2 TEXT');
 if (!existing.includes('image_url_3')) db.exec('ALTER TABLE dresses ADD COLUMN image_url_3 TEXT');
 if (!existing.includes('image_url_4')) db.exec('ALTER TABLE dresses ADD COLUMN image_url_4 TEXT');
+if (!existing.includes('silhouette')) db.exec('ALTER TABLE dresses ADD COLUMN silhouette TEXT');
+if (!existing.includes('sleeves'))    db.exec('ALTER TABLE dresses ADD COLUMN sleeves TEXT');
+if (!existing.includes('neckline'))   db.exec('ALTER TABLE dresses ADD COLUMN neckline TEXT');
+if (!existing.includes('features'))   db.exec('ALTER TABLE dresses ADD COLUMN features TEXT');
 
 module.exports = db;
