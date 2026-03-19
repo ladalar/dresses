@@ -30,38 +30,15 @@ function parseFeatures(str) {
   return str.split(',').map(s => s.trim()).filter(Boolean);
 }
 
-const ZOOM_WIDTH = 360;
-
-// ── Thumbnail with hover-zoom overlay ─────────────────────────────────────────
+// ── Thumbnail (simple display without hover) ─────────────────────────────────────────
 function DressThumb({ src, alt }) {
-  const [hovered, setHovered] = useState(false);
-  const [failed, setFailed]   = useState(false);
-  const [pos, setPos]         = useState({ top: 0, left: 0 });
-  const ref = useRef(null);
-
-  const handleMouseEnter = () => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      const left = rect.right + 12 + ZOOM_WIDTH > window.innerWidth
-        ? rect.left - ZOOM_WIDTH - 12
-        : rect.right + 12;
-      setPos({ top: rect.top, left });
-    }
-    setHovered(true);
-  };
+  const [failed, setFailed] = useState(false);
 
   if (failed) return <div className="no-image">👗</div>;
 
   return (
-    <span ref={ref} className="thumb-wrap"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={() => setHovered(false)}>
+    <span className="thumb-wrap">
       <img src={src} alt={alt} className="dress-thumb" onError={() => setFailed(true)} />
-      {hovered && (
-        <div className="thumb-zoom" style={{ top: pos.top, left: pos.left }}>
-          <img src={src} alt={alt} />
-        </div>
-      )}
     </span>
   );
 }
@@ -115,7 +92,7 @@ function FeaturesField({ value, onChange }) {
 }
 
 // ── Add / Edit modal ──────────────────────────────────────────────────────────
-function DressModal({ dress, onClose, onSave }) {
+function DressModal({ dress, onClose, onSave, allDresses }) {
   const [form, setForm] = useState(
     dress
       ? {
@@ -242,7 +219,7 @@ function DressModal({ dress, onClose, onSave }) {
 }
 
 // ── Dress card (images on top, details below) ─────────────────────────────────
-function DressCard({ dress, onEdit, onDelete }) {
+function DressCard({ dress, onEdit, onDelete, onMove, canMoveUp, canMoveDown }) {
   const imgs      = getDressImages(dress);
   const dFeatures = parseFeatures(dress.features);
   return (
@@ -276,6 +253,12 @@ function DressCard({ dress, onEdit, onDelete }) {
             ? <a href={dress.link} target="_blank" rel="noreferrer" className="dress-link">View ↗</a>
             : <span />}
           <div className="actions">
+            {canMoveUp && (
+              <button className="btn-move-up" onClick={() => onMove(dress.id, 'up')} title="Move up in ranking">↑</button>
+            )}
+            {canMoveDown && (
+              <button className="btn-move-down" onClick={() => onMove(dress.id, 'down')} title="Move down in ranking">↓</button>
+            )}
             <button className="btn-edit"   onClick={() => onEdit(dress)}>Edit</button>
             <button className="btn-delete" onClick={() => onDelete(dress.id)}>Delete</button>
           </div>
@@ -418,19 +401,136 @@ export default function App() {
     setDresses(prev => prev.filter(d => d.id !== id));
   };
 
+  const handleMove = async (id, direction) => {
+    const idx = dresses.findIndex(d => d.id === id);
+    if (idx === -1) return;
+
+    const dress = dresses[idx];
+    if (!dress.rank) return; // Can only move ranked dresses
+
+    if (direction === 'up' && idx > 0) {
+      const prevDress = dresses[idx - 1];
+      if (prevDress.rank == null) return; // Can't move if no rank
+      
+      // Swap ranks
+      const newRank = prevDress.rank;
+      const oldRank = dress.rank;
+      
+      // Update backend
+      await fetch(`${API}/${dress.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...dress, rank: newRank }),
+      });
+      await fetch(`${API}/${prevDress.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...prevDress, rank: oldRank }),
+      });
+      
+      // Update UI and resort by rank
+      const newDresses = dresses.map(d => {
+        if (d.id === dress.id) return { ...d, rank: newRank };
+        if (d.id === prevDress.id) return { ...d, rank: oldRank };
+        return d;
+      }).sort((a, b) => {
+        if (a.rank == null) return 1;
+        if (b.rank == null) return -1;
+        return a.rank - b.rank;
+      });
+      setDresses(newDresses);
+    } else if (direction === 'down' && idx < dresses.length - 1) {
+      const nextDress = dresses[idx + 1];
+      if (nextDress.rank == null) return; // Can't move if no rank
+      
+      // Swap ranks
+      const newRank = nextDress.rank;
+      const oldRank = dress.rank;
+      
+      // Update backend
+      await fetch(`${API}/${dress.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...dress, rank: newRank }),
+      });
+      await fetch(`${API}/${nextDress.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...nextDress, rank: oldRank }),
+      });
+      
+      // Update UI and resort by rank
+      const newDresses = dresses.map(d => {
+        if (d.id === dress.id) return { ...d, rank: newRank };
+        if (d.id === nextDress.id) return { ...d, rank: oldRank };
+        return d;
+      }).sort((a, b) => {
+        if (a.rank == null) return 1;
+        if (b.rank == null) return -1;
+        return a.rank - b.rank;
+      });
+      setDresses(newDresses);
+    }
+  };
+
   const handleSave = saved => {
-    setDresses(prev => {
-      const idx = prev.findIndex(d => d.id === saved.id);
-      if (idx >= 0) {
-        const n = [...prev];
-        n[idx] = saved;
-        return n;
+    // Find which dresses need rank updates due to shifting
+    const oldDress = dresses.find(d => d.id === saved.id);
+    const oldRank = oldDress?.rank;
+    const newRank = saved.rank;
+    
+    console.log(`[handleSave] oldRank: ${oldRank}, newRank: ${newRank}`);
+    
+    // Calculate which dresses need rank updates
+    let dressesToUpdate = [];
+    
+    if (newRank != null) {
+      if (oldRank != null && oldRank !== newRank) {
+        // Editing a ranked dress to a different rank
+        if (oldRank < newRank) {
+          // Moving down: decrement dresses between oldRank and newRank
+          dressesToUpdate = dresses.filter(d => 
+            d.id !== saved.id && d.rank != null && d.rank > oldRank && d.rank <= newRank
+          ).map(d => ({ ...d, rank: d.rank - 1 }));
+        } else {
+          // Moving up: increment dresses between newRank and oldRank
+          dressesToUpdate = dresses.filter(d => 
+            d.id !== saved.id && d.rank != null && d.rank >= newRank && d.rank < oldRank
+          ).map(d => ({ ...d, rank: d.rank + 1 }));
+        }
+      } else if (oldRank == null) {
+        // Adding new ranked dress: increment dresses at or after the new rank
+        dressesToUpdate = dresses.filter(d => 
+          d.rank != null && d.rank >= newRank
+        ).map(d => ({ ...d, rank: d.rank + 1 }));
       }
-      return [...prev, saved];
+    }
+    
+    console.log(`[handleSave] dressesToUpdate:`, dressesToUpdate);
+    
+    // Update backend for all affected dresses (await to ensure they complete)
+    const updateBackend = async () => {
+      for (const dress of dressesToUpdate) {
+        console.log(`[handleSave] Updating backend dress ${dress.id} to rank ${dress.rank}`);
+        await fetch(`${API}/${dress.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dress),
+        });
+      }
+    };
+    
+    updateBackend().then(() => {
+      console.log(`[handleSave] Backend updates complete, refetching...`);
+      // Refetch to ensure sync with backend
+      fetchDresses();
+      setModalOpen(false);
+      setEditing(null);
+    }).catch((err) => {
+      console.error(`[handleSave] Error updating backend:`, err);
+      setModalOpen(false);
+      setEditing(null);
     });
-    setModalOpen(false);
-    setEditing(null);
-    fetchDresses();
   };
 
   const sortIcon  = col => col !== sortBy ? '↕' : order === 'asc' ? '↑' : '↓';
@@ -523,12 +623,21 @@ export default function App() {
               </div>
             ) : (
               <div className="card-grid">
-                {filteredDresses.map(d => (
-                  <DressCard key={d.id} dress={d}
-                    onEdit={d => { setEditing(d); setModalOpen(true); }}
-                    onDelete={handleDelete}
-                  />
-                ))}
+                {filteredDresses.map((d, idx) => {
+                  const dressIdx = dresses.findIndex(dr => dr.id === d.id);
+                  const canMoveUp = dressIdx > 0 && d.rank != null && dresses[dressIdx - 1].rank != null;
+                  const canMoveDown = dressIdx < dresses.length - 1 && d.rank != null && dresses[dressIdx + 1].rank != null;
+                  
+                  return (
+                    <DressCard key={d.id} dress={d}
+                      onEdit={d => { setEditing(d); setModalOpen(true); }}
+                      onDelete={handleDelete}
+                      onMove={handleMove}
+                      canMoveUp={canMoveUp}
+                      canMoveDown={canMoveDown}
+                    />
+                  );
+                })}
               </div>
             )}
           </>
@@ -540,6 +649,7 @@ export default function App() {
           dress={editing}
           onClose={() => { setModalOpen(false); setEditing(null); }}
           onSave={handleSave}
+          allDresses={dresses}
         />
       )}
     </>
