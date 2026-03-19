@@ -20,7 +20,7 @@ function getDressImages(d) {
   return [d.image_url, d.image_url_2, d.image_url_3, d.image_url_4].filter(Boolean);
 }
 
-const ZOOM_WIDTH = 280;
+const ZOOM_WIDTH = 360;
 
 // Thumbnail with hover-zoom overlay
 function DressThumb({ src, alt }) {
