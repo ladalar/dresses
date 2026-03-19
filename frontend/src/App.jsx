@@ -4,9 +4,9 @@ import './App.css';
 const API = '/api/dresses';
 
 const SORT_COLS = [
-  { key: 'rank', label: 'Rank' },
-  { key: 'name', label: 'Name' },
-  { key: 'price', label: 'Price' },
+  { key: 'rank',       label: 'Rank' },
+  { key: 'name',       label: 'Name' },
+  { key: 'price',      label: 'Price' },
   { key: 'created_at', label: 'Date Added' },
 ];
 
@@ -21,12 +21,10 @@ const EMPTY_FORM = {
   silhouette: '', sleeves: '', neckline: '', features: [],
 };
 
-// Returns non-empty image URLs from a dress object (up to 4)
 function getDressImages(d) {
   return [d.image_url, d.image_url_2, d.image_url_3, d.image_url_4].filter(Boolean);
 }
 
-// Parse comma-separated features string → array (trims whitespace around each item)
 function parseFeatures(str) {
   if (!str) return [];
   return str.split(',').map(s => s.trim()).filter(Boolean);
@@ -34,17 +32,16 @@ function parseFeatures(str) {
 
 const ZOOM_WIDTH = 360;
 
-// Thumbnail with hover-zoom overlay
+// ── Thumbnail with hover-zoom overlay ─────────────────────────────────────────
 function DressThumb({ src, alt }) {
   const [hovered, setHovered] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [failed, setFailed]   = useState(false);
+  const [pos, setPos]         = useState({ top: 0, left: 0 });
   const ref = useRef(null);
 
   const handleMouseEnter = () => {
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
-      // Show zoom to the right of the thumbnail; flip left if too close to viewport edge
       const left = rect.right + 12 + ZOOM_WIDTH > window.innerWidth
         ? rect.left - ZOOM_WIDTH - 12
         : rect.right + 12;
@@ -59,12 +56,7 @@ function DressThumb({ src, alt }) {
     <span ref={ref} className="thumb-wrap"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setHovered(false)}>
-      <img
-        src={src}
-        alt={alt}
-        className="dress-thumb"
-        onError={() => setFailed(true)}
-      />
+      <img src={src} alt={alt} className="dress-thumb" onError={() => setFailed(true)} />
       {hovered && (
         <div className="thumb-zoom" style={{ top: pos.top, left: pos.left }}>
           <img src={src} alt={alt} />
@@ -74,26 +66,23 @@ function DressThumb({ src, alt }) {
   );
 }
 
-// Image URL input row inside the form
+// ── Image field in modal (preview above, input below) ─────────────────────────
 function ImageField({ label, value, onChange }) {
   return (
-    <div className="form-field">
-      <label>{label}</label>
-      <input value={value} onChange={e => onChange(e.target.value)} placeholder="https://..." />
-      {value && (
-        <img
-          src={value}
-          alt="preview"
-          className="preview-img"
-          onError={e => { e.target.style.display = 'none'; }}
-          onLoad={e => { e.target.style.display = 'block'; }}
-        />
-      )}
+    <div className="img-field">
+      <div className="img-preview-box">
+        {value
+          ? <img src={value} alt="preview" className="preview-img"
+              onError={e => { e.target.style.display = 'none'; }}
+              onLoad={e  => { e.target.style.display = 'block'; }} />
+          : <div className="preview-placeholder">👗</div>}
+      </div>
+      <span className="img-field-label">{label}</span>
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder="https://…" />
     </div>
   );
 }
 
-// Single-select dropdown field for the form
 function SelectField({ label, value, onChange, options }) {
   return (
     <div className="form-field">
@@ -106,14 +95,12 @@ function SelectField({ label, value, onChange, options }) {
   );
 }
 
-// Checkbox grid for multi-select features
 function FeaturesField({ value, onChange }) {
-  const toggle = (feat) => {
-    if (value.includes(feat)) onChange(value.filter(f => f !== feat));
-    else onChange([...value, feat]);
-  };
+  const toggle = feat => value.includes(feat)
+    ? onChange(value.filter(f => f !== feat))
+    : onChange([...value, feat]);
   return (
-    <div className="form-field">
+    <div className="form-field form-field-full">
       <label>Features</label>
       <div className="features-grid">
         {FEATURES_OPTIONS.map(f => (
@@ -127,52 +114,51 @@ function FeaturesField({ value, onChange }) {
   );
 }
 
+// ── Add / Edit modal ──────────────────────────────────────────────────────────
 function DressModal({ dress, onClose, onSave }) {
   const [form, setForm] = useState(
     dress
       ? {
-          ...EMPTY_FORM,
-          ...dress,
-          price: dress.price ?? '',
-          rank: dress.rank ?? '',
-          image_url: dress.image_url ?? '',
+          ...EMPTY_FORM, ...dress,
+          price:      dress.price      ?? '',
+          rank:       dress.rank       ?? '',
+          image_url:  dress.image_url  ?? '',
           image_url_2: dress.image_url_2 ?? '',
           image_url_3: dress.image_url_3 ?? '',
           image_url_4: dress.image_url_4 ?? '',
           silhouette: dress.silhouette ?? '',
-          sleeves: dress.sleeves ?? '',
-          neckline: dress.neckline ?? '',
-          features: parseFeatures(dress.features),
+          sleeves:    dress.sleeves    ?? '',
+          neckline:   dress.neckline   ?? '',
+          features:   parseFeatures(dress.features),
         }
       : { ...EMPTY_FORM }
   );
-  const [error, setError] = useState('');
+  const [error, setError]   = useState('');
   const [saving, setSaving] = useState(false);
-
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (!form.name.trim()) { setError('Name is required.'); return; }
     setSaving(true);
     setError('');
     try {
       const payload = {
-        name: form.name.trim(),
-        image_url: form.image_url.trim() || null,
+        name:        form.name.trim(),
+        image_url:   form.image_url.trim()   || null,
         image_url_2: form.image_url_2.trim() || null,
         image_url_3: form.image_url_3.trim() || null,
         image_url_4: form.image_url_4.trim() || null,
-        price: form.price !== '' ? parseFloat(form.price) : null,
-        link: form.link.trim() || null,
-        rank: form.rank !== '' ? parseInt(form.rank, 10) : null,
-        comments: form.comments.trim() || null,
-        silhouette: form.silhouette || null,
-        sleeves: form.sleeves || null,
-        neckline: form.neckline || null,
-        features: form.features.length > 0 ? form.features.join(',') : null,
+        price:       form.price   !== '' ? parseFloat(form.price)        : null,
+        link:        form.link.trim()    || null,
+        rank:        form.rank    !== '' ? parseInt(form.rank, 10)       : null,
+        comments:    form.comments.trim() || null,
+        silhouette:  form.silhouette || null,
+        sleeves:     form.sleeves    || null,
+        neckline:    form.neckline   || null,
+        features:    form.features.length > 0 ? form.features.join(',') : null,
       };
-      const url = dress ? `${API}/${dress.id}` : API;
+      const url    = dress ? `${API}/${dress.id}` : API;
       const method = dress ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
@@ -185,8 +171,7 @@ function DressModal({ dress, onClose, onSave }) {
         setSaving(false);
         return;
       }
-      const saved = await res.json();
-      onSave(saved);
+      onSave(await res.json());
     } catch {
       setError('Network error.');
       setSaving(false);
@@ -194,42 +179,56 @@ function DressModal({ dress, onClose, onSave }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
-        <h2>{dress ? 'Edit Dress' : 'Add New Dress'}</h2>
-        <form onSubmit={handleSubmit} className="form-grid">
-          <div className="form-field">
-            <label>Name *</label>
-            <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Vera Wang Classic" />
+        <div className="modal-header">
+          <h2>{dress ? 'Edit Dress' : 'Add New Dress'}</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <form onSubmit={handleSubmit}>
+
+          {/* ── Images: 4 side-by-side ── */}
+          <p className="form-section-label">Images</p>
+          <div className="images-row">
+            <ImageField label="Image 1" value={form.image_url}   onChange={v => set('image_url',   v)} />
+            <ImageField label="Image 2" value={form.image_url_2} onChange={v => set('image_url_2', v)} />
+            <ImageField label="Image 3" value={form.image_url_3} onChange={v => set('image_url_3', v)} />
+            <ImageField label="Image 4" value={form.image_url_4} onChange={v => set('image_url_4', v)} />
           </div>
 
-          <ImageField label="Image 1" value={form.image_url} onChange={v => set('image_url', v)} />
-          <ImageField label="Image 2" value={form.image_url_2} onChange={v => set('image_url_2', v)} />
-          <ImageField label="Image 3" value={form.image_url_3} onChange={v => set('image_url_3', v)} />
-          <ImageField label="Image 4" value={form.image_url_4} onChange={v => set('image_url_4', v)} />
+          {/* ── Basic fields ── */}
+          <p className="form-section-label">Details</p>
+          <div className="form-grid-2">
+            <div className="form-field form-field-full">
+              <label>Name *</label>
+              <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Vera Wang Classic" />
+            </div>
+            <div className="form-field">
+              <label>Price ($)</label>
+              <input type="number" min="0" step="0.01" value={form.price} onChange={e => set('price', e.target.value)} placeholder="e.g. 2500" />
+            </div>
+            <div className="form-field">
+              <label>Rank</label>
+              <input type="number" min="1" value={form.rank} onChange={e => set('rank', e.target.value)} placeholder="e.g. 1" />
+            </div>
+            <div className="form-field form-field-full">
+              <label>Link</label>
+              <input value={form.link} onChange={e => set('link', e.target.value)} placeholder="https://…" />
+            </div>
+            <div className="form-field form-field-full">
+              <label>Comments</label>
+              <textarea value={form.comments} onChange={e => set('comments', e.target.value)} placeholder="Your notes…" />
+            </div>
+          </div>
 
-          <div className="form-field">
-            <label>Price ($)</label>
-            <input type="number" min="0" step="0.01" value={form.price} onChange={e => set('price', e.target.value)} placeholder="e.g. 2500" />
+          {/* ── Style Details ── */}
+          <p className="form-section-label">Style Details</p>
+          <div className="form-grid-2">
+            <SelectField label="Silhouette" value={form.silhouette} onChange={v => set('silhouette', v)} options={SILHOUETTE_OPTIONS} />
+            <SelectField label="Sleeves"    value={form.sleeves}    onChange={v => set('sleeves',    v)} options={SLEEVES_OPTIONS} />
+            <SelectField label="Neckline"   value={form.neckline}   onChange={v => set('neckline',   v)} options={NECKLINE_OPTIONS} />
+            <FeaturesField value={form.features} onChange={v => set('features', v)} />
           </div>
-          <div className="form-field">
-            <label>Link</label>
-            <input value={form.link} onChange={e => set('link', e.target.value)} placeholder="https://..." />
-          </div>
-          <div className="form-field">
-            <label>Rank</label>
-            <input type="number" min="1" value={form.rank} onChange={e => set('rank', e.target.value)} placeholder="e.g. 1" />
-          </div>
-          <div className="form-field">
-            <label>Comments</label>
-            <textarea value={form.comments} onChange={e => set('comments', e.target.value)} placeholder="Your notes about this dress..." />
-          </div>
-
-          <div className="form-section-label">Style Details</div>
-          <SelectField label="Silhouette" value={form.silhouette} onChange={v => set('silhouette', v)} options={SILHOUETTE_OPTIONS} />
-          <SelectField label="Sleeves" value={form.sleeves} onChange={v => set('sleeves', v)} options={SLEEVES_OPTIONS} />
-          <SelectField label="Neckline" value={form.neckline} onChange={v => set('neckline', v)} options={NECKLINE_OPTIONS} />
-          <FeaturesField value={form.features} onChange={v => set('features', v)} />
 
           {error && <p className="error-msg">{error}</p>}
           <div className="modal-actions">
@@ -242,19 +241,159 @@ function DressModal({ dress, onClose, onSave }) {
   );
 }
 
+// ── Dress card (images on top, details below) ─────────────────────────────────
+function DressCard({ dress, onEdit, onDelete }) {
+  const imgs      = getDressImages(dress);
+  const dFeatures = parseFeatures(dress.features);
+  return (
+    <div className="dress-card">
+      <div className="card-gallery">
+        {imgs.length > 0
+          ? imgs.map((src, i) => <DressThumb key={i} src={src} alt={`${dress.name} ${i + 1}`} />)
+          : <div className="no-image card-no-img">👗</div>}
+      </div>
+      <div className="card-body">
+        <div className="card-top-row">
+          <div className="card-name-wrap">
+            {dress.rank != null && <span className="rank-badge">{dress.rank}</span>}
+            <strong className="card-name">{dress.name}</strong>
+          </div>
+          {dress.price != null && (
+            <span className="card-price">${Number(dress.price).toLocaleString()}</span>
+          )}
+        </div>
+        {(dress.silhouette || dress.sleeves || dress.neckline || dFeatures.length > 0) && (
+          <div className="attr-pills">
+            {dress.silhouette && <span className="pill pill-silhouette">{dress.silhouette}</span>}
+            {dress.sleeves    && <span className="pill pill-sleeves">{dress.sleeves}</span>}
+            {dress.neckline   && <span className="pill pill-neckline">{dress.neckline}</span>}
+            {dFeatures.map(f  => <span key={f} className="pill pill-feature">{f}</span>)}
+          </div>
+        )}
+        {dress.comments && <p className="card-comments">{dress.comments}</p>}
+        <div className="card-footer">
+          {dress.link
+            ? <a href={dress.link} target="_blank" rel="noreferrer" className="dress-link">View ↗</a>
+            : <span />}
+          <div className="actions">
+            <button className="btn-edit"   onClick={() => onEdit(dress)}>Edit</button>
+            <button className="btn-delete" onClick={() => onDelete(dress.id)}>Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function StatCard({ label, value, sub }) {
+  return (
+    <div className="stat-card">
+      <div className="stat-value">{value}</div>
+      <div className="stat-label">{label}</div>
+      {sub && <div className="stat-sub">{sub}</div>}
+    </div>
+  );
+}
+
+function BarChart({ title, data }) {
+  const max = Math.max(...data.map(d => d.count), 1);
+  return (
+    <div className="chart-card">
+      <h3 className="chart-title">{title}</h3>
+      {data.length === 0
+        ? <p className="chart-empty">No data yet</p>
+        : (
+          <div className="chart-rows">
+            {data.map(({ label, count, pct }) => (
+              <div key={label} className="chart-row">
+                <span className="chart-label">{label}</span>
+                <div className="chart-bar-wrap">
+                  <div className="chart-bar" style={{ width: `${(count / max) * 100}%` }} />
+                </div>
+                <span className="chart-stat">{pct}% <em>({count})</em></span>
+              </div>
+            ))}
+          </div>
+        )}
+    </div>
+  );
+}
+
+function Dashboard({ dresses }) {
+  const total = dresses.length;
+  if (total === 0) {
+    return (
+      <div className="empty">
+        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
+        <p>Add dresses to see statistics here.</p>
+      </div>
+    );
+  }
+
+  const prices   = dresses.map(d => d.price).filter(p => p != null);
+  const avgPrice = prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null;
+  const minPrice = prices.length ? Math.min(...prices) : null;
+  const maxPrice = prices.length ? Math.max(...prices) : null;
+
+  const countBy = field => {
+    const counts = {};
+    dresses.forEach(d => { const v = d[field]; if (v) counts[v] = (counts[v] || 0) + 1; });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, count]) => ({ label, count, pct: Math.round((count / total) * 100) }));
+  };
+
+  const featureCounts = (() => {
+    const counts = {};
+    dresses.forEach(d => parseFeatures(d.features).forEach(f => { counts[f] = (counts[f] || 0) + 1; }));
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, count]) => ({ label, count, pct: Math.round((count / total) * 100) }));
+  })();
+
+  const withImages     = dresses.filter(d => getDressImages(d).length > 0).length;
+  const withStyleData  = dresses.filter(d => d.silhouette || d.neckline || d.sleeves).length;
+  const ranked         = dresses.filter(d => d.rank != null).length;
+
+  return (
+    <div className="dashboard">
+      <div className="stat-row">
+        <StatCard label="Total Dresses"  value={total} />
+        <StatCard
+          label="Average Price"
+          value={avgPrice != null ? `$${avgPrice.toLocaleString()}` : '—'}
+          sub={minPrice != null ? `$${minPrice.toLocaleString()} – $${maxPrice.toLocaleString()}` : undefined}
+        />
+        <StatCard label="With Images"     value={`${Math.round((withImages    / total) * 100)}%`} sub={`${withImages} of ${total}`} />
+        <StatCard label="Style Filled In" value={`${Math.round((withStyleData / total) * 100)}%`} sub={`${withStyleData} of ${total}`} />
+        <StatCard label="Ranked"          value={`${Math.round((ranked        / total) * 100)}%`} sub={`${ranked} of ${total}`} />
+      </div>
+      <div className="chart-grid">
+        <BarChart title="Silhouette" data={countBy('silhouette')} />
+        <BarChart title="Neckline"   data={countBy('neckline')} />
+        <BarChart title="Sleeves"    data={countBy('sleeves')} />
+        <BarChart title="Features"   data={featureCounts} />
+      </div>
+    </div>
+  );
+}
+
+// ── Root app ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [dresses, setDresses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState('rank');
-  const [order, setOrder] = useState('asc');
+  const [dresses,   setDresses]   = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [sortBy,    setSortBy]    = useState('rank');
+  const [order,     setOrder]     = useState('asc');
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [filters, setFilters] = useState({ silhouette: '', sleeves: '', neckline: '', feature: '' });
+  const [editing,   setEditing]   = useState(null);
+  const [filters,   setFilters]   = useState({ silhouette: '', sleeves: '', neckline: '', feature: '' });
+  const [activeTab, setActiveTab] = useState('rankings');
 
   const fetchDresses = useCallback(async (sb = sortBy, ord = order) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}?sortBy=${sb}&order=${ord}`);
+      const res  = await fetch(`${API}?sortBy=${sb}&order=${ord}`);
       const data = await res.json();
       setDresses(data);
     } catch {
@@ -266,27 +405,26 @@ export default function App() {
 
   useEffect(() => { fetchDresses(); }, [fetchDresses]);
 
-  const handleSort = (col) => {
-    let newOrder = 'asc';
-    if (col === sortBy) newOrder = order === 'asc' ? 'desc' : 'asc';
+  const handleSort = col => {
+    const newOrder = col === sortBy && order === 'asc' ? 'desc' : 'asc';
     setSortBy(col);
     setOrder(newOrder);
     fetchDresses(col, newOrder);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async id => {
     if (!window.confirm('Remove this dress from your ranking?')) return;
     await fetch(`${API}/${id}`, { method: 'DELETE' });
     setDresses(prev => prev.filter(d => d.id !== id));
   };
 
-  const handleSave = (saved) => {
+  const handleSave = saved => {
     setDresses(prev => {
       const idx = prev.findIndex(d => d.id === saved.id);
       if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = saved;
-        return next;
+        const n = [...prev];
+        n[idx] = saved;
+        return n;
       }
       return [...prev, saved];
     });
@@ -295,11 +433,7 @@ export default function App() {
     fetchDresses();
   };
 
-  const sortIcon = (col) => {
-    if (col !== sortBy) return '↕';
-    return order === 'asc' ? '↑' : '↓';
-  };
-
+  const sortIcon  = col => col !== sortBy ? '↕' : order === 'asc' ? '↑' : '↓';
   const setFilter = (k, v) => setFilters(f => ({ ...f, [k]: v }));
   const clearFilters = () => setFilters({ silhouette: '', sleeves: '', neckline: '', feature: '' });
   const hasFilters = Object.values(filters).some(Boolean);
@@ -308,119 +442,98 @@ export default function App() {
     if (filters.silhouette && d.silhouette !== filters.silhouette) return false;
     if (filters.sleeves    && d.sleeves    !== filters.sleeves)    return false;
     if (filters.neckline   && d.neckline   !== filters.neckline)   return false;
-    if (filters.feature) {
-      const dFeatures = parseFeatures(d.features);
-      if (!dFeatures.includes(filters.feature)) return false;
-    }
+    if (filters.feature && !parseFeatures(d.features).includes(filters.feature)) return false;
     return true;
   });
 
   return (
     <>
-      <div className="header">
-        <h1>💍 Wedding Dress Rankings</h1>
-        <p>Your personal ranking of favourite wedding dresses</p>
-      </div>
-
-      <div className="toolbar">
-        <span>Sort by:</span>
-        {SORT_COLS.map(c => (
-          <button key={c.key} onClick={() => handleSort(c.key)}
-            style={{ background: sortBy === c.key ? '#8b4570' : '#f3e0eb', color: sortBy === c.key ? 'white' : '#3a2a2a', border: '1px solid #d4a0c0' }}>
-            {c.label} {sortIcon(c.key)}
+      {/* ── Site header ── */}
+      <header className="site-header">
+        <div className="header-inner">
+          <div>
+            <h1 className="site-title">💍 Wedding Dress Rankings</h1>
+            <p className="site-sub">Your personal curation of favourite wedding dresses</p>
+          </div>
+          <button className="btn-add" onClick={() => { setEditing(null); setModalOpen(true); }}>
+            + Add Dress
           </button>
-        ))}
-        <button className="btn-add" onClick={() => { setEditing(null); setModalOpen(true); }}>+ Add Dress</button>
-      </div>
+        </div>
+        <nav className="tab-bar">
+          <button className={`tab-btn${activeTab === 'rankings'  ? ' active' : ''}`} onClick={() => setActiveTab('rankings')}>Rankings</button>
+          <button className={`tab-btn${activeTab === 'dashboard' ? ' active' : ''}`} onClick={() => setActiveTab('dashboard')}>Dashboard</button>
+        </nav>
+      </header>
 
-      <div className="filter-bar">
-        <span className="filter-label">Filter:</span>
-        <select value={filters.silhouette} onChange={e => setFilter('silhouette', e.target.value)}>
-          <option value="">All Silhouettes</option>
-          {SILHOUETTE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-        <select value={filters.sleeves} onChange={e => setFilter('sleeves', e.target.value)}>
-          <option value="">All Sleeves</option>
-          {SLEEVES_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-        <select value={filters.neckline} onChange={e => setFilter('neckline', e.target.value)}>
-          <option value="">All Necklines</option>
-          {NECKLINE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-        <select value={filters.feature} onChange={e => setFilter('feature', e.target.value)}>
-          <option value="">All Features</option>
-          {FEATURES_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-        {hasFilters && (
-          <button className="btn-clear-filters" onClick={clearFilters}>✕ Clear</button>
+      <main className="main-content">
+        {activeTab === 'dashboard' ? (
+          <Dashboard dresses={dresses} />
+        ) : (
+          <>
+            {/* ── Sort toolbar ── */}
+            <div className="toolbar">
+              <span className="toolbar-label">Sort</span>
+              {SORT_COLS.map(c => (
+                <button key={c.key}
+                  className={`sort-btn${sortBy === c.key ? ' active' : ''}`}
+                  onClick={() => handleSort(c.key)}>
+                  {c.label} <span className="sort-icon">{sortIcon(c.key)}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* ── Filter bar ── */}
+            <div className="filter-bar">
+              <span className="filter-label">Filter</span>
+              <select value={filters.silhouette} onChange={e => setFilter('silhouette', e.target.value)}>
+                <option value="">All Silhouettes</option>
+                {SILHOUETTE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <select value={filters.sleeves} onChange={e => setFilter('sleeves', e.target.value)}>
+                <option value="">All Sleeves</option>
+                {SLEEVES_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <select value={filters.neckline} onChange={e => setFilter('neckline', e.target.value)}>
+                <option value="">All Necklines</option>
+                {NECKLINE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <select value={filters.feature} onChange={e => setFilter('feature', e.target.value)}>
+                <option value="">All Features</option>
+                {FEATURES_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+              {hasFilters && (
+                <button className="btn-clear-filters" onClick={clearFilters}>✕ Clear</button>
+              )}
+            </div>
+
+            {/* ── Content ── */}
+            {loading ? (
+              <div className="loading">Loading dresses…</div>
+            ) : dresses.length === 0 ? (
+              <div className="empty">
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👗</div>
+                <p>No dresses yet. Click <strong>+ Add Dress</strong> to get started!</p>
+              </div>
+            ) : filteredDresses.length === 0 ? (
+              <div className="empty">
+                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔍</div>
+                <p>No dresses match the current filters.{' '}
+                  <button className="btn-link" onClick={clearFilters}>Clear filters</button>
+                </p>
+              </div>
+            ) : (
+              <div className="card-grid">
+                {filteredDresses.map(d => (
+                  <DressCard key={d.id} dress={d}
+                    onEdit={d => { setEditing(d); setModalOpen(true); }}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
-      </div>
-
-      {loading ? (
-        <div className="loading">Loading dresses…</div>
-      ) : dresses.length === 0 ? (
-        <div className="empty">
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👗</div>
-          <p>No dresses yet. Click <strong>+ Add Dress</strong> to get started!</p>
-        </div>
-      ) : filteredDresses.length === 0 ? (
-        <div className="empty">
-          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔍</div>
-          <p>No dresses match the current filters. <button className="btn-link" onClick={clearFilters}>Clear filters</button></p>
-        </div>
-      ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th onClick={() => handleSort('rank')}>Rank <span className="sort-icon">{sortIcon('rank')}</span></th>
-                <th>Images</th>
-                <th onClick={() => handleSort('name')}>Name <span className="sort-icon">{sortIcon('name')}</span></th>
-                <th onClick={() => handleSort('price')}>Price <span className="sort-icon">{sortIcon('price')}</span></th>
-                <th>Link</th>
-                <th>Comments</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDresses.map(d => {
-                const imgs = getDressImages(d);
-                const dFeatures = parseFeatures(d.features);
-                return (
-                  <tr key={d.id}>
-                    <td>{d.rank != null ? <span className="rank-badge">{d.rank}</span> : '—'}</td>
-                    <td>
-                      <div className="thumb-gallery">
-                        {imgs.length > 0
-                          ? imgs.map((src, i) => <DressThumb key={i} src={src} alt={`${d.name} ${i + 1}`} />)
-                          : <div className="no-image">👗</div>}
-                      </div>
-                    </td>
-                    <td>
-                      <strong>{d.name}</strong>
-                      <div className="attr-pills">
-                        {d.silhouette && <span className="pill pill-silhouette">{d.silhouette}</span>}
-                        {d.sleeves    && <span className="pill pill-sleeves">{d.sleeves}</span>}
-                        {d.neckline   && <span className="pill pill-neckline">{d.neckline}</span>}
-                        {dFeatures.map(f => <span key={f} className="pill pill-feature">{f}</span>)}
-                      </div>
-                    </td>
-                    <td>{d.price != null ? `$${Number(d.price).toLocaleString()}` : '—'}</td>
-                    <td>{d.link ? <a href={d.link} target="_blank" rel="noreferrer" className="dress-link">View ↗</a> : '—'}</td>
-                    <td style={{ maxWidth: '220px', whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>{d.comments || '—'}</td>
-                    <td>
-                      <div className="actions">
-                        <button className="btn-edit" onClick={() => { setEditing(d); setModalOpen(true); }}>Edit</button>
-                        <button className="btn-delete" onClick={() => handleDelete(d.id)}>Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      </main>
 
       {modalOpen && (
         <DressModal
