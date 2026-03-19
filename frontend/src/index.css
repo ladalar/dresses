@@ -1,0 +1,14 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Georgia', serif;
+  background: #f9f5f7;
+  color: #1a1212;
+  min-height: 100vh;
+}
+
+#root {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0;
+}
