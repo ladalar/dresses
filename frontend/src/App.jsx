@@ -30,17 +30,6 @@ function parseFeatures(str) {
   return str.split(',').map(s => s.trim()).filter(Boolean);
 }
 
-function normalizeImageUrl(url) {
-  if (!url) return url;
-  const trimmed = url.trim();
-  const match = trimmed.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+?)(\?.*)?$/i);
-  if (match) {
-    const [, owner, repo, branch, filePath] = match;
-    return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
-  }
-  return trimmed;
-}
-
 // ── Thumbnail (simple display without hover) ─────────────────────────────────────────
 function DressThumb({ src, alt }) {
   const [failed, setFailed] = useState(false);
