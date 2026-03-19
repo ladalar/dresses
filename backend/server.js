@@ -9,6 +9,7 @@ const db = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const uploadsDir = path.join(__dirname, 'uploads');
+const imagesDir = path.join(__dirname, '../images');
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -52,6 +53,7 @@ app.use(cors());
 app.use(express.json({ limit: '15mb' }));
 app.use('/api', apiLimiter);
 app.use('/uploads', express.static(uploadsDir));
+app.use('/images', express.static(imagesDir));
 
 // Serve built frontend
 const frontendDist = path.join(__dirname, '../frontend/dist');
@@ -61,6 +63,38 @@ app.use(express.static(frontendDist));
 app.post('/api/uploads', upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Image file is required' });
   return res.status(201).json({ url: `/uploads/${req.file.filename}` });
+});
+
+// List uploaded images so users can pick from the images folder in the UI
+app.get('/api/uploads', (req, res) => {
+  try {
+    const images = fs
+      .readdirSync(uploadsDir, { withFileTypes: true })
+      .filter(entry => entry.isFile())
+      .map(entry => entry.name)
+      .sort((a, b) => b.localeCompare(a))
+      .map(name => `/uploads/${encodeURIComponent(name)}`);
+
+    return res.json(images);
+  } catch {
+    return res.status(500).json({ error: 'Failed to read images folder' });
+  }
+});
+
+// List repository images so users can pick from the images folder in the UI
+app.get('/api/images', (req, res) => {
+  try {
+    const images = fs
+      .readdirSync(imagesDir, { withFileTypes: true })
+      .filter(entry => entry.isFile())
+      .map(entry => entry.name)
+      .sort((a, b) => b.localeCompare(a))
+      .map(name => `/images/${encodeURIComponent(name)}`);
+
+    return res.json(images);
+  } catch {
+    return res.status(500).json({ error: 'Failed to read images folder' });
+  }
 });
 
 // GET all dresses with optional sorting

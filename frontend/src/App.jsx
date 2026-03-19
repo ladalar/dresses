@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 
 const API = '/api/dresses';
+const IMAGES_API = '/api/images';
 
 const SORT_COLS = [
   { key: 'rank',       label: 'Rank' },
@@ -30,6 +31,29 @@ function parseFeatures(str) {
   return str.split(',').map(s => s.trim()).filter(Boolean);
 }
 
+function normalizeImageUrl(value) {
+  if (!value) return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  // Keep local uploads and data/blob URLs unchanged.
+  if (
+    trimmed.startsWith('/uploads/') ||
+    trimmed.startsWith('/images/') ||
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:')
+  ) {
+    return trimmed;
+  }
+
+  // If protocol is missing, default to https for external image links.
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return trimmed;
+}
+
 // ── Thumbnail (simple display without hover) ─────────────────────────────────────────
 function DressThumb({ src, alt }) {
   const [failed, setFailed] = useState(false);
@@ -44,9 +68,11 @@ function DressThumb({ src, alt }) {
 }
 
 // ── Image field in modal (preview above, input below) ─────────────────────────
-function ImageField({ label, value, onChange }) {
-  const handleUrlChange = e => {
-    onChange(normalizeImageUrl(e.target.value));
+function ImageField({ label, value, onChange, imageOptions }) {
+  const handlePickFromFolder = e => {
+    const picked = e.target.value;
+    if (picked) onChange(picked);
+    e.target.value = '';
   };
 
   return (
@@ -59,7 +85,13 @@ function ImageField({ label, value, onChange }) {
           : <div className="preview-placeholder">👗</div>}
       </div>
       <span className="img-field-label">{label}</span>
-      <input value={value} onChange={handleUrlChange} placeholder="https://…" />
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder="https://…" />
+      <select className="img-folder-select" defaultValue="" onChange={handlePickFromFolder}>
+        <option value="">Choose from images folder…</option>
+        {imageOptions.map(url => (
+          <option key={url} value={url}>{url.replace('/images/', '').replace('/uploads/', '')}</option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -116,7 +148,50 @@ function DressModal({ dress, onClose, onSave, allDresses }) {
   );
   const [error, setError]   = useState('');
   const [saving, setSaving] = useState(false);
+  const [imageOptions, setImageOptions] = useState([]);
+  const [imagesLoadError, setImagesLoadError] = useState('');
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadImages = async () => {
+      try {
+        // Try proxy route first, then direct backend as fallback.
+        const endpoints = [IMAGES_API, 'http://localhost:3001/api/images'];
+        let loaded = false;
+
+        for (const endpoint of endpoints) {
+          const res = await fetch(endpoint);
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            if (!cancelled) {
+              setImageOptions(data);
+              setImagesLoadError('');
+            }
+            loaded = true;
+            break;
+          }
+        }
+
+        if (!loaded && !cancelled) {
+          setImageOptions([]);
+          setImagesLoadError('Could not load images list. Make sure backend is running on port 3001.');
+        }
+      } catch {
+        if (!cancelled) {
+          setImageOptions([]);
+          setImagesLoadError('Could not load images list. Make sure backend is running on port 3001.');
+        }
+      }
+    };
+
+    loadImages();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -170,11 +245,12 @@ function DressModal({ dress, onClose, onSave, allDresses }) {
 
           {/* ── Images: 4 side-by-side ── */}
           <p className="form-section-label">Images</p>
+          {imagesLoadError && <p className="error-msg">{imagesLoadError}</p>}
           <div className="images-row">
-            <ImageField label="Image 1" value={form.image_url}   onChange={v => set('image_url',   v)} />
-            <ImageField label="Image 2" value={form.image_url_2} onChange={v => set('image_url_2', v)} />
-            <ImageField label="Image 3" value={form.image_url_3} onChange={v => set('image_url_3', v)} />
-            <ImageField label="Image 4" value={form.image_url_4} onChange={v => set('image_url_4', v)} />
+            <ImageField label="Image 1" value={form.image_url}   onChange={v => set('image_url',   v)} imageOptions={imageOptions} />
+            <ImageField label="Image 2" value={form.image_url_2} onChange={v => set('image_url_2', v)} imageOptions={imageOptions} />
+            <ImageField label="Image 3" value={form.image_url_3} onChange={v => set('image_url_3', v)} imageOptions={imageOptions} />
+            <ImageField label="Image 4" value={form.image_url_4} onChange={v => set('image_url_4', v)} imageOptions={imageOptions} />
           </div>
 
           {/* ── Basic fields ── */}

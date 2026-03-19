@@ -419,7 +419,20 @@
   font-family: inherit;
   color: #3a1e2e;
 }
+.img-folder-select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #e0d0da;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: #3a1e2e;
+  background: #fff;
+}
 .img-field input:focus {
+  outline: none; border-color: #6b2d52;
+  box-shadow: 0 0 0 2px rgba(107,45,82,0.12);
+}
+.img-folder-select:focus {
   outline: none; border-color: #6b2d52;
   box-shadow: 0 0 0 2px rgba(107,45,82,0.12);
 }
